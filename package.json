@@ -29,6 +29,8 @@
     "grunt": "~0.4.1",
     "grunt-contrib-uglify": "~0.2.5",
     "grunt-contrib-jshint": "~0.7.1",
-    "express": "~3.4.4"
+    "express": "~3.4.4",
+    "request": "~2.27.0",
+    "q": "~0.9.7"
   }
 }
