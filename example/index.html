@@ -1,0 +1,26 @@
+<!DOCTYPE>
+<html>
+<head>
+    <title>CloudConvert Node.js API Example</title>
+    <link rel="stylesheet" type="text/css" href="css/default.css" />
+    <script type="text/javascript" src="js/default.js"></script>
+</head>
+<body>
+
+    <form enctype="multipart/form-data" action="http://127.0.0.1:8888/" method="post">
+
+        <label for="file">Convert</label>
+        <input type="file" id="file" name="file">
+        <label for="type">into</label>
+        <select id="type" name="type">
+            <option value="jpg">JPG</option>
+            <option value="png">PNG</option>
+            <option value="gif">GIF</option>
+        </select>
+        <label for="button">and</label>
+        <input type="submit" id="button" name="button" value="Convert" />
+
+    </form>
+
+</body>
+</html>
