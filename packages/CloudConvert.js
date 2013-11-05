@@ -2,6 +2,12 @@
 
     "use strict";
 
+    /**
+     * Since Restler doesn't allow rejectUnauthorized.
+     * @reference https://github.com/danwrong/restler/pull/132
+     */
+    process.env.NODE_TLS_REJECT_UNAUTHORIZED = 0;
+
     // Dependencies, baby!
     var fs          = require('fs'),
         yaml        = require('js-yaml'),
