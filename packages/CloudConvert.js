@@ -142,84 +142,106 @@
         _convert: function _convert() {
 
             // Prepare the URL to notify CloudConvert of the impending conversion.
-            var url     = util.format(this.urlProcess, this.details.from, this.details.into, this.apiKey),
-                $scope  = this;
+            var url = util.format(this.urlProcess, this.details.from, this.details.into, this.apiKey);
 
-            this._getContent(url).then(function then(content) {
+            // Begin the process using Q's promises!
+            this._getContent(url)
+                .then(this._prepareConversion.bind(this))
+                .then(this._sendFile.bind(this));
 
-                var deferred = q.defer();
+        },
 
-                if ('id' in content) {
+        /**
+         * @method _prepareConversion
+         * @param content {Object}
+         * @return {Q.promise}
+         * @private
+         */
+        _prepareConversion: function _prepareConversion(content) {
 
-                    // We've found the "id" in the JSON content, so we can resolve our promise
-                    // and jump to the next stage!
-                    $scope.task.id  = content.id;
-                    $scope.task.url = util.format('https:%s', content.url);
+            var deferred = q.defer();
 
-                    deferred.resolve();
+            if ('id' in content) {
 
-                }
+                // We've found the "id" in the JSON content, so we can resolve our promise
+                // and jump to the next stage!
+                this.task.id  = content.id;
+                this.task.url = util.format('https:%s', content.url);
 
-                // Boohoo! We weren't able to find the "id" property in the returned content.
-                deferred.reject();
+                deferred.resolve();
 
-                return deferred.promise;
+            }
 
-            }).then(function andThen() {
+            // Boohoo! We weren't able to find the "id" property in the returned content.
+            deferred.reject();
 
-                fs.stat($scope.details.file, function(error, stats) {
+            return deferred.promise;
 
-                    // Gather the necessary information about the file.
-                    var mimeType    = mime.lookup($scope.details.file),
-                        size        = stats.size;
+        },
 
-                    // Invoke the callback method for uploading.
-                    $scope.callbacks.uploading.method();
+        /**
+         * @method _sendFile
+         * @private
+         */
+        _sendFile: function _sendFile() {
 
-                    // Construct the options for the conversion.
-                    var options = {
-                        rejectUnauthorized  : false,
-                        multipart           : true,
-                        data: {
-                            input           : 'upload',
-                            file            : restler.file($scope.details.file, null, size, null, mimeType),
-                            outputformat    : $scope.details.into
-                        }
-                    };
+            var url             = this.task.url,
+                callbacks       = this.callbacks,
+                file            = this.details.file,
+                outputFormat    = this.details.into;
 
-                    // Use Restler to submit the image along with the details to the CloudConvert server.
-                    restler.post($scope.task.url, options).on('complete', function(data) {
+            fs.stat(file, function(error, stats) {
 
-                        // Invoke the callback method for uploaded.
-                        $scope.callbacks.uploaded.method(data);
+                // Gather the necessary information about the file.
+                var mimeType    = mime.lookup(file),
+                    size        = stats.size;
 
-                        // Periodically invoke the callback with the status.
-                        var interval = setInterval(function() {
+                // Invoke the callback method for uploading.
+                callbacks.uploading.method();
 
-                            $scope._getContent($scope.task.url).then(function(data) {
+                // Construct the options for the conversion.
+                var options = {
+                    rejectUnauthorized  : false,
+                    multipart           : true,
+                    data: {
+                        input           : 'upload',
+                        file            : restler.file(file, null, size, null, mimeType),
+                        outputformat    : outputFormat
+                    }
+                };
 
-                                // Check if we're all done.
-                                if (data.step === 'finished') {
+                // Use Restler to submit the image along with the details to the CloudConvert server.
+                restler.post(url, options).on('complete', function(data) {
 
-                                    // If we are then we'll invoke the finished callback, and clear
-                                    // the interval so no more callbacks are invoked.
-                                    $scope.callbacks.finished.method(data);
-                                    clearInterval(interval);
-                                    return;
+                    // Invoke the callback method for uploaded.
+                    callbacks.uploaded.method(data);
 
-                                }
+                    // Periodically invoke the callback with the status.
+                    var interval = setInterval(function() {
 
-                                // Otherwise we'll invoke the converting callback.
-                                $scope.callbacks.converting.method(data);
+                        this._getContent(url).then(function(data) {
 
-                            });
+                            // Check if we're all done.
+                            if (data.step === 'finished') {
 
-                        }, $scope.callbacks.converting.interval);
+                                // If we are then we'll invoke the finished callback, and clear
+                                // the interval so no more callbacks are invoked.
+                                callbacks.finished.method(data);
+                                clearInterval(interval);
+                                return;
 
-                    });
-                });
+                            }
 
-            });
+                            // Otherwise we'll invoke the converting callback.
+                            callbacks.converting.method(data);
+
+                        }.bind(this));
+
+                    }.bind(this), callbacks.converting.interval);
+
+                }.bind(this));
+
+            }.bind(this));
 
         },
 
