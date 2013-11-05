@@ -1,5 +1,8 @@
 (function($module) {
 
+    "use strict";
+
+    // Dependencies, baby!
     var fs          = require('fs'),
         yaml        = require('js-yaml'),
         util        = require('util'),
@@ -8,8 +11,6 @@
         q           = require('q'),
         mime        = require('mime'),
         restler     = require('restler');
-
-    "use strict";
 
     /**
      * @module CloudConvert
@@ -54,43 +55,30 @@
         apiKey: '',
 
         /**
-         * @property when
+         * @property defaultInterval
+         * @type {Number}
+         */
+        defaultInterval: 2500,
+
+        /**
+         * @property callbacks
          * @type {Object}
          */
-        when: {
+        callbacks: { uploading: null, uploaded: null, converting: null, finished: null },
 
-            /**
-             * @property defaultInterval
-             * @type {Number}
-             */
-            defaultInterval: 500,
+        /**
+         * @method when
+         * @param observerName {String}
+         * @param method {Function}
+         * @param interval {Number}
+         * @return {void}
+         */
+        when: function when(observerName, method, interval) {
 
-            /**
-             * @method uploading
-             * @param method {Function}
-             * @return {void}
-             */
-            uploading: function converting(method, millisecondsIntervals) {
-
-            },
-
-            /**
-             * @method converting
-             * @param method {Function}
-             * @return {void}
-             */
-            converting: function converting(method, millisecondsIntervals) {
-
-            },
-
-            /**
-             * @method finished
-             * @param method {Function}
-             * @return {void}
-             */
-            finished: function finished(method) {
-
-            }
+            this.callbacks[observerName] = {
+                method      : method,
+                interval    : interval || this.defaultInterval
+            };
 
         },
 
@@ -174,47 +162,57 @@
 
             }).then(function andThen() {
 
-//                process.env.NODE_TLS_REJECT_UNAUTHORIZED = 0;
+                fs.stat($scope.details.file, function(error, stats) {
 
-                fs.stat($scope.details.file, function(err, stats) {
+                    // Gather the necessary information about the file.
+                    var mimeType    = mime.lookup($scope.details.file),
+                        size        = stats.size;
 
-                    restler.post($scope.task.url, {
-                        rejectUnauthorized: false,
-                        multipart: true,
+                    // Invoke the callback method for uploading.
+                    $scope.callbacks.uploading.method();
+
+                    // Construct the options for the conversion.
+                    var options = {
+                        rejectUnauthorized  : false,
+                        multipart           : true,
                         data: {
-                            input       : 'upload',
-                            file        : restler.file($scope.details.file, null, stats.size, null, 'image/jpg'),
-                            outputformat: $scope.details.into
+                            input           : 'upload',
+                            file            : restler.file($scope.details.file, null, size, null, mimeType),
+                            outputformat    : $scope.details.into
                         }
+                    };
 
-                    }).on('complete', function(data) {
-                        console.log(data);
+                    // Use Restler to submit the image along with the details to the CloudConvert server.
+                    restler.post($scope.task.url, options).on('complete', function(data) {
+
+                        // Invoke the callback method for uploaded.
+                        $scope.callbacks.uploaded.method(data);
+
+                        // Periodically invoke the callback with the status.
+                        var interval = setInterval(function() {
+
+                            $scope._getContent($scope.task.url).then(function(data) {
+
+                                // Check if we're all done.
+                                if (data.step === 'finished') {
+
+                                    // If we are then we'll invoke the finished callback, and clear
+                                    // the interval so no more callbacks are invoked.
+                                    $scope.callbacks.finished.method(data);
+                                    clearInterval(interval);
+                                    return;
+
+                                }
+
+                                // Otherwise we'll invoke the converting callback.
+                                $scope.callbacks.converting.method(data);
+
+                            });
+
+                        }, $scope.callbacks.converting.interval);
+
                     });
                 });
-
-                // Create the necessary options for CloudConvert to begin converting.
-//                var options = {
-//                    strictSSL   : false,
-//                    headers: {
-//                        'content-type' : 'multipart/form-data'
-//                    },
-//                    method: 'POST',
-//                    multipart: [{
-//                        'Content-Disposition' : 'form-data; name="file"; filename="Example.jpg"',
-//                        'Content-Type' : mime.lookup('Example.jpg'),
-//                        body: $scope.details.file
-//                    },{
-//                        'Content-Disposition' : 'form-data; name="outputformat"',
-//                        body: $scope.details.into
-//                    }]
-//                };
-//
-//
-//                request.post($scope.task.url, options,
-//                    function(err, res, body) {
-//                        res.resume();
-//                        console.log(body);
-//                    });
 
             });
 
@@ -228,9 +226,13 @@
          */
         _getContent: function _getContent(url) {
 
-            var deferred = q.defer();
+            var deferred    = q.defer(),
+                options     = {
+                    url         : url,
+                    strictSSL   : false
+                };
 
-            request(url, function request(error, response, body) {
+            request(options, function request(error, response, body) {
 
                 if (error && response.statusCode !== 200) {
 
