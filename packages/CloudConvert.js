@@ -7,7 +7,6 @@
         yaml        = require('js-yaml'),
         util        = require('util'),
         request     = require('request'),
-        https       = require('https'),
         q           = require('q'),
         mime        = require('mime'),
         restler     = require('restler');

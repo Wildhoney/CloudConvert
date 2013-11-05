@@ -1,5 +1,5 @@
 {
-  "name": "CloudConvert",
+  "name": "cloud-convert",
   "version": "0.0.1",
   "description": "Easy-to-use Node.js implementation of the CloudConvert API.",
   "main": "index.js",
