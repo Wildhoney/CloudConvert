@@ -4,7 +4,11 @@
         yaml        = require('js-yaml'),
         util        = require('util'),
         request     = require('request'),
-        q           = require('q');
+        https       = require('https'),
+        q           = require('q'),
+        FormData    = require('form-data'),
+        mime        = require('mime'),
+        restler     = require('restler');
 
     "use strict";
 
@@ -69,8 +73,6 @@
              */
             updated: function updated(method, millisecondsIntervals) {
 
-
-
             },
 
             /**
@@ -86,11 +88,11 @@
 
         /**
          * @method convert
-         * @param data {Object}
+         * @param file {String}
          * @return {CloudConvert}
          */
-        convert: function convert(data) {
-            this.details.file = data;
+        convert: function convert(file) {
+            this.details.file = file;
             return this;
         },
 
@@ -164,7 +166,29 @@
 
             }).then(function andThen() {
 
-                
+                // Create the necessary options for CloudConvert to begin converting.
+                var options = {
+                    strictSSL   : false,
+                    headers: {
+                        'content-type' : 'multipart/form-data'
+                    },
+                    method: 'POST',
+                    multipart: [{
+                        'Content-Disposition' : 'form-data; name="file"; filename="Example.jpg"',
+                        'Content-Type' : mime.lookup('Example.jpg'),
+                        body: $scope.details.file
+                    },{
+                        'Content-Disposition' : 'form-data; name="outputformat"',
+                        body: $scope.details.into
+                    }]
+                };
+
+
+                request.post($scope.task.url, options,
+                    function(err, res, body) {
+                        res.resume();
+                        console.log(body);
+                    });
 
             });
 

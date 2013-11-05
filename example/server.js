@@ -18,7 +18,7 @@ app.all('*', function(request, response, next) {
     next();
 });
 
-fileSystem.readFile(__dirname + '/uploaded-files/Rio.jpg', function (error, file) {
+fileSystem.readFile(__dirname + '/uploaded-files/Rio.jpg', 'utf-8', function (error, file) {
 
     var task = new CloudConvert().convert(file).from('jpg').into('png');
 
