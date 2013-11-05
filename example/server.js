@@ -18,21 +18,23 @@ app.all('*', function(request, response, next) {
     next();
 });
 
-fileSystem.readFile(__dirname + '/uploaded-files/Rio.jpg', 'utf-8', function (error, file) {
 
-    var task = new CloudConvert().convert(file).from('jpg').into('png');
+var file    = __dirname + '/uploaded-files/Rio.jpg',
+    task    = new CloudConvert().convert(file).from('jpg').into('png');
 
-    task.when.updated(function(data) {
+task.when.uploading(function(data) {
 
-    }, 5);
+}, 5);
 
-    task.when.finished(function(data) {
+task.when.converting(function(data) {
 
-    });
+}, 5);
 
-    task.process();
+task.when.finished(function(data) {
 
 });
+
+task.process();
 
 
 // Responsible for the call to OPTIONS.

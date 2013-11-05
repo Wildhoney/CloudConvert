@@ -6,7 +6,6 @@
         request     = require('request'),
         https       = require('https'),
         q           = require('q'),
-        FormData    = require('form-data'),
         mime        = require('mime'),
         restler     = require('restler');
 
@@ -67,11 +66,20 @@
             defaultInterval: 500,
 
             /**
-             * @method updated
+             * @method uploading
              * @param method {Function}
              * @return {void}
              */
-            updated: function updated(method, millisecondsIntervals) {
+            uploading: function converting(method, millisecondsIntervals) {
+
+            },
+
+            /**
+             * @method converting
+             * @param method {Function}
+             * @return {void}
+             */
+            converting: function converting(method, millisecondsIntervals) {
 
             },
 
@@ -166,29 +174,47 @@
 
             }).then(function andThen() {
 
-                // Create the necessary options for CloudConvert to begin converting.
-                var options = {
-                    strictSSL   : false,
-                    headers: {
-                        'content-type' : 'multipart/form-data'
-                    },
-                    method: 'POST',
-                    multipart: [{
-                        'Content-Disposition' : 'form-data; name="file"; filename="Example.jpg"',
-                        'Content-Type' : mime.lookup('Example.jpg'),
-                        body: $scope.details.file
-                    },{
-                        'Content-Disposition' : 'form-data; name="outputformat"',
-                        body: $scope.details.into
-                    }]
-                };
+//                process.env.NODE_TLS_REJECT_UNAUTHORIZED = 0;
 
+                fs.stat($scope.details.file, function(err, stats) {
 
-                request.post($scope.task.url, options,
-                    function(err, res, body) {
-                        res.resume();
-                        console.log(body);
+                    restler.post($scope.task.url, {
+                        rejectUnauthorized: false,
+                        multipart: true,
+                        data: {
+                            input       : 'upload',
+                            file        : restler.file($scope.details.file, null, stats.size, null, 'image/jpg'),
+                            outputformat: $scope.details.into
+                        }
+
+                    }).on('complete', function(data) {
+                        console.log(data);
                     });
+                });
+
+                // Create the necessary options for CloudConvert to begin converting.
+//                var options = {
+//                    strictSSL   : false,
+//                    headers: {
+//                        'content-type' : 'multipart/form-data'
+//                    },
+//                    method: 'POST',
+//                    multipart: [{
+//                        'Content-Disposition' : 'form-data; name="file"; filename="Example.jpg"',
+//                        'Content-Type' : mime.lookup('Example.jpg'),
+//                        body: $scope.details.file
+//                    },{
+//                        'Content-Disposition' : 'form-data; name="outputformat"',
+//                        body: $scope.details.into
+//                    }]
+//                };
+//
+//
+//                request.post($scope.task.url, options,
+//                    function(err, res, body) {
+//                        res.resume();
+//                        console.log(body);
+//                    });
 
             });
 
