@@ -1,4 +1,4 @@
-(function($module) {
+(function($module, $process) {
 
     "use strict";
 
@@ -6,7 +6,7 @@
      * Since Restler doesn't allow rejectUnauthorized.
      * @reference https://github.com/danwrong/restler/pull/132
      */
-    process.env.NODE_TLS_REJECT_UNAUTHORIZED = 0;
+    $process.env.NODE_TLS_REJECT_UNAUTHORIZED = 0;
 
     // Dependencies, baby!
     var fs          = require('fs'),
@@ -15,7 +15,9 @@
         request     = require('request'),
         q           = require('q'),
         mime        = require('mime'),
-        restler     = require('restler');
+        restler     = require('restler'),
+        ansi        = require('ansi'),
+        cursor      = ansi(process.stdout);
 
     /**
      * @module CloudConvert
@@ -114,11 +116,25 @@
         _callbacks: {
 
             /**
+             * @on error
+             * Invoked once when an error occurs.
+             */
+            error: {
+                method: function(data) {
+                    cursor.hex('#553c45').bg.hex('#e7a3bd')
+                        .write(' CloudConvert: ').reset().write(' ' + data.message + "\n");
+                }
+            },
+
+            /**
              * @on uploading
              * Invoked once when the file upload process has begun.
              */
             uploading: {
-                method: function() {}
+                method: function() {
+                    cursor.hex('#324645').bg.hex('#9fd3d0')
+                        .write(' CloudConvert: ').reset().write(" Uploading File... \n");
+                }
             },
 
             /**
@@ -126,7 +142,10 @@
              * Invoked once when the file has been successfully uploaded.
              */
             uploaded: {
-                method: function() {}
+                method: function() {
+                    cursor.hex('#1f251b').bg.hex('#b4ce9e')
+                        .write(' CloudConvert: ').reset().write(" File Uploaded... \n");
+                }
             },
 
             /**
@@ -134,7 +153,11 @@
              * Invoked many times when the file is being converted by CloudConvert.
              */
             converting: {
-                method: function() {}
+                interval: 2500,
+                method  : function() {
+                    cursor.hex('#324645').bg.hex('#9fd3d0')
+                        .write(' CloudConvert: ').reset().write(" Converting File... \n");
+                }
             },
 
             /**
@@ -142,7 +165,10 @@
              * Invoked once when the conversion has been successfully completed.
              */
             finished: {
-                method: function() {}
+                method: function() {
+                    cursor.hex('#1f251b').bg.hex('#b4ce9e')
+                        .write(' CloudConvert: ').reset().write(" All Done! \n");
+                }
             }
 
         },
@@ -369,8 +395,8 @@
 
                         // If we are then we'll invoke the finished callback, and clear
                         // the interval so no more callbacks are invoked.
-                        this._callbacks.finished.method(data);
                         clearInterval(interval);
+                        this._callbacks.finished.method(data);
                         return;
 
                     }
@@ -421,4 +447,4 @@
     // CommonJS, my dear!
     $module.exports = CloudConvert;
 
-})(module);
+})(module, process);
