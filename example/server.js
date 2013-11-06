@@ -18,7 +18,7 @@ app.all('*', function(request, response, next) {
     next();
 });
 
-var config  = __dirname + '/config.yaml',
+var config  = __dirname + '/config.yml',
     file    = __dirname + '/uploaded-files/Rio.jpg',
     task    = new CloudConvert(config).convert(file).from('jpg').into('png').process();
 

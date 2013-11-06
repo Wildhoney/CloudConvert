@@ -63,7 +63,7 @@ For further information about the CloudConvert API, please take a look at their 
 Putting it all together we can chain our methods:
 
 ```javascript
-var config  = __dirname + '/config.yaml',
+var config  = __dirname + '/config.yml',
     file    = __dirname + '/uploaded-files/Rio.jpg';
 
 var $task   = new CloudConvert(config).convert(file).from('jpg').into('png').process();
@@ -78,11 +78,11 @@ We keep the API key separate from the codebase &ndash; your YAML config **must**
 apiKey: 123456789
 ```
 
-Please refer to the `config.yaml.example` file in `example`. When you instantiate a new `CloudConvert` task, pass in the path to your YAML config.
+Please refer to the `config.yml.example` file in `example`. When you instantiate a new `CloudConvert` task, pass in the path to your YAML config.
 
 ```javascript
-// Current path plus "config.yaml".
-var $config = __dirname + '/config.yaml',
+// Current path plus "config.yml".
+var $config = __dirname + '/config.yml',
     $task   = new CloudConvert($config);
 ```
 
