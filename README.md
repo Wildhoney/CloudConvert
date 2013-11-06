@@ -38,7 +38,7 @@ We define a handful of callbacks, all of which can be setup with `when(observerN
  * `when('uploaded', ...)` &ndash; once when the file has been uploaded;
  * `when('converting', ..., 2500)` &ndash; every 2,500 milliseconds with conversion status;
  * `when('finished', ...)` &ndash; once after the conversion has finished;
- * `when('error', ...)` &dasnh; once when an error occurs;
+ * `when('error', ...)` &ndash; once when an error occurs;
 
 All of these are **optional** and pass through useful data in their `arguments`.
 
