@@ -12,7 +12,7 @@ Our implementation uses Node.js' asynchronous behaviour to create a non-blocking
 
 **Further Reading:** For the following, please see the example in `example` which uses Angular.js and Socket.IO.
 
-You first need your file which you're going to convert. We instantiate a new `CloudConvert` object per conversion task &ndash; passing in the path to our <a href="">YAML configuration</a>. By using the `convert` method we tell the API where our file resides.
+You first need your file which you're going to convert. We instantiate a new `CloudConvert` object per conversion task &ndash; passing in the path to our <a href="#yaml-configuration">YAML configuration</a>. By using the `convert` method we tell the API where our file resides.
 
 ```javascript
 var $task = new CloudConvert(config).convert(filePath);
