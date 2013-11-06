@@ -53,7 +53,7 @@ $task.when('uploading', function(data) {
 When the processing has finished and the `finished` observer has been invoked, you have all you need to continue. For example, you could download the file from the CloudConvert servers by inspecting the `data` object in the callback.
 
 ```javascript
-task.when('finished', function(data) {
+$task.when('finished', function(data) {
     console.log("Let's download " + data.output.url);
 });
 ```
