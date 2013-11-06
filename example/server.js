@@ -22,27 +22,27 @@ app.all('*', function(request, response, next) {
 var file    = __dirname + '/uploaded-files/Rio.jpg',
     task    = new CloudConvert().convert(file).from('jpg').into('png');
 
-task.when('uploading', function(data) {
-    console.log('Uploading...');
-});
+//task.when('uploading', function(data) {
+//    console.log('Uploading...');
+//});
 
-task.when('error', function(data) {
-    console.log(data);
-});
+//task.when('error', function(data) {
+//    console.log(data);
+//});
 
-task.when('uploaded', function(data) {
-    console.log('Uploaded...');
-    console.log(data);
-});
+//task.when('uploaded', function(data) {
+//    console.log('Uploaded...');
+//    console.log(data);
+//});
 
-task.when('converting', function(data) {
-    console.log('Converting...');
-});
-
-task.when('finished', function(data) {
-    console.log('Finished!');
-    console.log(data);
-});
+//task.when('converting', function(data) {
+//    console.log('Converting...');
+//});
+//
+//task.when('finished', function(data) {
+//    console.log('Finished!');
+//    console.log(data);
+//});
 
 task.process();
 
