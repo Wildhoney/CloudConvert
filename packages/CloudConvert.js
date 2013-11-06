@@ -30,46 +30,122 @@
     CloudConvert.prototype = {
 
         /**
-         * @property urlProcess
+         * @property _urlProcess
          * @type {String}
+         * @private
          */
-        urlProcess: 'https://api.cloudconvert.org/process?inputformat=%s&outputformat=%s&apikey=%s',
+        _urlProcess: 'https://api.cloudconvert.org/process?inputformat=%s&outputformat=%s&apikey=%s',
 
         /**
-         * @property urlActions
+         * @property _urlActions
          * @type {Object}
+         * @private
          */
-        urlActions: { delete: 'delete', cancel: 'cancel' },
+        _urlActions: { delete: 'delete', cancel: 'cancel' },
 
         /**
-         * @property details
+         * @property _options
          * @type {Object}
+         * Containers data that has been specified by the user.
+         * @private
          */
-        details: { file: null, from: null, into: null },
+        _options: { file: null, from: null, into: null },
 
         /**
-         * @property task
+         * @property _task
          * @type {Object}
+         * Contains data that has been retrieved from the CloudConvert servers.
+         * @private
          */
-        task: { id: null, url: null },
+        _task: { id: null, url: null },
 
         /**
-         * @property apiKey
+         * @property _apiKey
          * @type {String}
+         * @private
          */
-        apiKey: '',
+        _apiKey: '',
 
         /**
-         * @property defaultInterval
+         * @property _defaultInterval
          * @type {Number}
+         * @private
          */
-        defaultInterval: 2500,
+        _defaultInterval: 2500,
 
         /**
-         * @property callbacks
+         * @property _errorCodes
          * @type {Object}
+         * @private
          */
-        callbacks: { uploading: null, uploaded: null, converting: null, finished: null },
+        _errorCodes: {
+
+            /**
+             * @property invalidConfig
+             * Thrown when the YAML configuration file cannot be loaded.
+             * @type {Number}
+             * @default 1
+             */
+            invalidConfig: 1,
+
+            /**
+             * @property configKey
+             * Thrown when the "apiKey" key cannot be found in the YAML config.
+             * @type {Number}
+             * @default 2
+             */
+            configKey: 2,
+
+            /**
+             * @property invalidJobId
+             * Thrown when CloudConvert does not send us back the response with the job ID.
+             * @type {Number}
+             * @default 3
+             */
+            invalidJobId: 3
+            
+        },
+
+        /**
+         * @property _callbacks
+         * @type {Object}
+         * @private
+         */
+        _callbacks: {
+
+            /**
+             * @on uploading
+             * Invoked once when the file upload process has begun.
+             */
+            uploading: {
+                method: function() {}
+            },
+
+            /**
+             * @on uploaded
+             * Invoked once when the file has been successfully uploaded.
+             */
+            uploaded: {
+                method: function() {}
+            },
+
+            /**
+             * @on converting
+             * Invoked many times when the file is being converted by CloudConvert.
+             */
+            converting: {
+                method: function() {}
+            },
+
+            /**
+             * @on finished
+             * Invoked once when the conversion has been successfully completed.
+             */
+            finished: {
+                method: function() {}
+            }
+
+        },
 
         /**
          * @method when
@@ -80,9 +156,9 @@
          */
         when: function when(observerName, method, interval) {
 
-            this.callbacks[observerName] = {
+            this._callbacks[observerName] = {
                 method      : method,
-                interval    : interval || this.defaultInterval
+                interval    : interval || this._defaultInterval
             };
 
         },
@@ -93,7 +169,7 @@
          * @return {CloudConvert}
          */
         convert: function convert(file) {
-            this.details.file = file;
+            this._options.file = file;
             return this;
         },
 
@@ -103,7 +179,7 @@
          * @return {CloudConvert}
          */
         from: function from(format) {
-            this.details.from = format;
+            this._options.from = format;
             return this;
         },
 
@@ -113,23 +189,53 @@
          * @return {CloudConvert}
          */
         into: function into(format) {
-            this.details.into = format;
+            this._options.into = format;
             return this;
         },
 
         /**
          * @method process
+         * Responsible for initiating the whole conversion process.
          * @return {void}
          */
         process: function process() {
 
-            var $scope = this;
-
             // First we need to read the "config.yaml" file to access the API information.
             fs.readFile(__dirname + '/config.yaml', 'utf-8', function parseYamlConfig(error, data) {
-                $scope.apiKey = yaml.load(data).apiKey;
-                $scope._convert.apply($scope);
-            });
+
+                try {
+
+                    // Attempt to load and parse the YAML config file.
+                    var config = yaml.load(data);
+
+                    // Determine if the "apiKey" key is in the configuration.
+                    if (!('apiKey' in config)) {
+
+                        this._callbacks.error.method({
+                            code    : this._errorCodes.configKey,
+                            message : 'Cannot find "apiKey" in configuration!'
+                        });
+
+                        return false;
+
+                    }
+
+                    // Otherwise we can load the API key, and continue processing.
+                    this._apiKey = config.apiKey;
+                    this._convert.apply(this);
+
+                } catch (e) {
+
+                    this._callbacks.error.method({
+                        code    : this._errorCodes.invalidConfig,
+                        message : 'Unable to parse YAML configuration!'
+                    });
+
+                    return false;
+
+                }
+
+            }.bind(this));
 
         },
 
@@ -142,18 +248,33 @@
         _convert: function _convert() {
 
             // Prepare the URL to notify CloudConvert of the impending conversion.
-            var url = util.format(this.urlProcess, this.details.from, this.details.into, this.apiKey);
+            var url = util.format(this._urlProcess, this._options.from, this._options.into, this._apiKey);
 
             // Begin the process using Q's promises!
             this._getContent(url)
+
+                // Initiate the call to the CloudConvert servers to notify them of the impending conversion.
                 .then(this._prepareConversion.bind(this))
-                .then(this._sendFile.bind(this));
+
+                // Send the file to the CloudConvert servers so they can begin the process.
+                .then(this._sendFile.bind(this))
+
+                // Apply the callbacks to notify Node of the status.
+                .then(this._applyCallbacks.bind(this))
+
+                // Fallback if any errors occur in the process.
+                .fail(function(error) {
+
+                    this._callbacks.error.method(error);
+
+                }.bind(this));
 
         },
 
         /**
          * @method _prepareConversion
          * @param content {Object}
+         * Responsible for making the initial call to the CloudConvert servers to retrieve the job ID.
          * @return {Q.promise}
          * @private
          */
@@ -165,15 +286,18 @@
 
                 // We've found the "id" in the JSON content, so we can resolve our promise
                 // and jump to the next stage!
-                this.task.id  = content.id;
-                this.task.url = util.format('https:%s', content.url);
+                this._task.id  = content.id;
+                this._task.url = util.format('https:%s', content.url);
 
                 deferred.resolve();
 
             }
 
             // Boohoo! We weren't able to find the "id" property in the returned content.
-            deferred.reject();
+            deferred.reject({
+                code    : this._errorCodes.invalidJobId,
+                message : 'Cannot determine CloudConvert job ID!'
+            });
 
             return deferred.promise;
 
@@ -181,14 +305,15 @@
 
         /**
          * @method _sendFile
+         * Responsible for sending the file to the CloudConvert server for the them to convert the
+         * files into the desired format.
+         * @return {Q.promise}
          * @private
          */
         _sendFile: function _sendFile() {
 
-            var url             = this.task.url,
-                callbacks       = this.callbacks,
-                file            = this.details.file,
-                outputFormat    = this.details.into;
+            var file            = this._options.file,
+                deferred        = q.defer();
 
             fs.stat(file, function(error, stats) {
 
@@ -197,7 +322,7 @@
                     size        = stats.size;
 
                 // Invoke the callback method for uploading.
-                callbacks.uploading.method();
+                this._callbacks.uploading.method();
 
                 // Construct the options for the conversion.
                 var options = {
@@ -206,49 +331,63 @@
                     data: {
                         input           : 'upload',
                         file            : restler.file(file, null, size, null, mimeType),
-                        outputformat    : outputFormat
+                        outputformat    : this._options.into
                     }
                 };
 
                 // Use Restler to submit the image along with the details to the CloudConvert server.
-                restler.post(url, options).on('complete', function(data) {
-
-                    // Invoke the callback method for uploaded.
-                    callbacks.uploaded.method(data);
-
-                    // Periodically invoke the callback with the status.
-                    var interval = setInterval(function() {
-
-                        this._getContent(url).then(function(data) {
-
-                            // Check if we're all done.
-                            if (data.step === 'finished') {
-
-                                // If we are then we'll invoke the finished callback, and clear
-                                // the interval so no more callbacks are invoked.
-                                callbacks.finished.method(data);
-                                clearInterval(interval);
-                                return;
-
-                            }
-
-                            // Otherwise we'll invoke the converting callback.
-                            callbacks.converting.method(data);
-
-                        }.bind(this));
-
-                    }.bind(this), callbacks.converting.interval);
-
+                restler.post(this._task.url, options).on('complete', function(data) {
+                    deferred.resolve(data);
                 }.bind(this));
 
             }.bind(this));
+
+            return deferred.promise;
+
+        },
+
+        /**
+         * @method _applyCallbacks
+         * Responsible for applying the user configured callbacks so that the end-user knows what's going
+         * on with their conversion.
+         * @param data {Object}
+         * @return {void}
+         * @private
+         */
+        _applyCallbacks: function _applyCallbacks(data) {
+
+            // Invoke the callback method for uploaded.
+            this._callbacks.uploaded.method(data);
+
+            // Periodically invoke the callback with the status.
+            var interval = setInterval(function() {
+
+                this._getContent(this._task.url).then(function(data) {
+
+                    // Check if we're all done.
+                    if (data.step === 'finished') {
+
+                        // If we are then we'll invoke the finished callback, and clear
+                        // the interval so no more callbacks are invoked.
+                        this._callbacks.finished.method(data);
+                        clearInterval(interval);
+                        return;
+
+                    }
+
+                    // Otherwise we'll invoke the converting callback.
+                    this._callbacks.converting.method(data);
+
+                }.bind(this));
+
+            }.bind(this), this._callbacks.converting.interval);
 
         },
 
         /**
          * @method _getContent
          * @param url {String}
-         * @return {Function}
+         * @return {Q.promise}
          * @private
          */
         _getContent: function _getContent(url) {
