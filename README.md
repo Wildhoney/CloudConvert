@@ -12,10 +12,10 @@ Our implementation uses Node.js' asynchronous behaviour to create a non-blocking
 
 **Further Reading:** For the following, please see the example in `example` which uses Angular.js and Socket.IO.
 
-You first need your file which you're going to convert. We instantiate a new `CloudConvert` object per conversion task. By using the `convert` method we tell the API where our file resides.
+You first need your file which you're going to convert. We instantiate a new `CloudConvert` object per conversion task &ndash; passing in the path to our <a href="">YAML configuration</a>. By using the `convert` method we tell the API where our file resides.
 
 ```javascript
-var $task = new CloudConvert().convert(filePath);
+var $task = new CloudConvert(config).convert(filePath);
 ```
 
 Afterwards we need to tell the API what the current format our file is, and which format we'd like to convert it into.
@@ -59,6 +59,32 @@ $task.when('finished', function(data) {
 ```
 
 For further information about the CloudConvert API, please take a look at their <a href="https://cloudconvert.org/page/api" target="_blank">API documentation</a>.
+
+Putting it all together we can chain our methods:
+
+```javascript
+var config  = __dirname + '/config.yaml',
+    file    = __dirname + '/uploaded-files/Rio.jpg';
+
+var $task   = new CloudConvert(config).convert(file).from('jpg').into('png').process();
+```
+
+YAML Configuration
+------------
+
+We keep the API key separate from the codebase &ndash; your YAML config **must** contain your API key obtained from CloudConvert.
+
+```
+apiKey: 123456789
+```
+
+Please refer to the `config.yaml.example` file in `example`. When you instantiate a new `CloudConvert` task, pass in the path to your YAML config.
+
+```javascript
+// Current path plus "config.yaml".
+var $config = __dirname + '/config.yaml',
+    $task   = new CloudConvert($config);
+```
 
 Contributions
 ------------

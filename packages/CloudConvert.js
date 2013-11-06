@@ -23,7 +23,9 @@
      * @module CloudConvert
      * @constructor
      */
-    var CloudConvert = function CloudConvert() {};
+    var CloudConvert = function CloudConvert(configFile) {
+        this._options.config = configFile;
+    };
 
     /**
      * @property prototype
@@ -51,7 +53,7 @@
          * Containers data that has been specified by the user.
          * @private
          */
-        _options: { file: null, from: null, into: null },
+        _options: { file: null, from: null, into: null, config: null },
 
         /**
          * @property _task
@@ -104,7 +106,15 @@
              * @type {Number}
              * @default 3
              */
-            invalidJobId: 3
+            invalidJobId: 3,
+
+            /**
+             * @property invalidFile
+             * Thrown when we're unable to locate the file wishing to be converted.
+             * @type {Number}
+             * @default 4
+             */
+            invalidFile: 4
             
         },
 
@@ -227,7 +237,7 @@
         process: function process() {
 
             // First we need to read the "config.yaml" file to access the API information.
-            fs.readFile(__dirname + '/config.yaml', 'utf-8', function parseYamlConfig(error, data) {
+            fs.readFile(this._options.config, 'utf-8', function parseYamlConfig(error, data) {
 
                 try {
 
@@ -342,6 +352,18 @@
                 deferred        = q.defer();
 
             fs.stat(file, function(error, stats) {
+
+                if (error) {
+
+                    // Determine if an error was thrown.
+                    this._callbacks.error.method({
+                        code    : this._errorCodes.invalidFile,
+                        message : 'Unable to locate the file to convert!'
+                    });
+
+                    return;
+
+                }
 
                 // Gather the necessary information about the file.
                 var mimeType    = mime.lookup(file),
