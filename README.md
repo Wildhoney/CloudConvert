@@ -12,19 +12,19 @@ Our implementation uses Node.js' asynchronous behaviour to create a non-blocking
 
 **Further Reading:** For the following, please see the example in `example` which uses Angular.js and Socket.IO.
 
-You first need your file which you're going to convert. We instantiate a new `CloudConvert` object per conversion task &ndash; passing in the path to our <a href="#yaml-configuration">YAML configuration</a>. By using the `convert` method we tell the API where our file resides.
+You first need your file which you're going to convert. We instantiate a new `CloudConvert` object per conversion task &ndash; passing in the path to your <a href="#yaml-configuration">YAML configuration</a>. By using the `convert` method we tell the API where our file resides.
 
 ```javascript
 var $task = new CloudConvert(config).convert(filePath);
 ```
 
-Afterwards we need to tell the API what the current format our file is, and which format we'd like to convert it into.
+Afterwards we need to tell the API what the current format of our file is, and which format we'd like to convert it into.
 
 ```javascript
 $task.from('jpg').into('png');
 ```
 
-That's all we need! We can begin the conversion process with the `process` method.
+We can then begin the conversion process with the `process` method.
 
 ```javascript
 $task.process();
@@ -34,7 +34,7 @@ However, because Node.js is entirely asynchronous, none of the aforementioned me
 
 We define a handful of callbacks, all of which can be setup with `when(observerName, method, interval)` &ndash; where `interval` only applies to one callback.
 
- * `when('uploading', ...)` &ndash; once when uploading as begun;
+ * `when('uploading', ...)` &ndash; once when uploading has begun;
  * `when('uploaded', ...)` &ndash; once when the file has been uploaded;
  * `when('converting', ..., 2500)` &ndash; every 2,500 milliseconds with conversion status;
  * `when('finished', ...)` &ndash; once after the conversion has finished;
