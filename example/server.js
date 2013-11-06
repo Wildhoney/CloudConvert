@@ -26,6 +26,10 @@ task.when('uploading', function(data) {
     console.log('Uploading...');
 });
 
+task.when('error', function(data) {
+    console.log(data);
+});
+
 task.when('uploaded', function(data) {
     console.log('Uploaded...');
     console.log(data);
