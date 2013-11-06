@@ -6,7 +6,9 @@
      * Since Restler doesn't allow rejectUnauthorized.
      * @reference https://github.com/danwrong/restler/pull/132
      */
-    $process.env.NODE_TLS_REJECT_UNAUTHORIZED = 0;
+    if ($process) {
+        $process.env.NODE_TLS_REJECT_UNAUTHORIZED = 0;
+    }
 
     // Dependencies, baby!
     var fs          = require('fs'),
@@ -53,7 +55,7 @@
          * Containers data that has been specified by the user.
          * @private
          */
-        _options: { file: null, from: null, into: null, config: null },
+            _options: { file: null, from: null, into: null, config: null },
 
         /**
          * @property _task
@@ -469,4 +471,4 @@
     // CommonJS, my dear!
     $module.exports = CloudConvert;
 
-})(module, process);
+})(module, typeof process !== 'undefined' ? process : null);
